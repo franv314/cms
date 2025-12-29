@@ -130,7 +130,6 @@ def check_isolate(args: Namespace) -> None:
         error('Isolate exists, but it is not executable.'
               + (' Are you in the isolate group?' if exec_for_group else ""))
 
-
 def install_cms(args: Namespace) -> None:
     if not args.skip_isolate:
         check_isolate(args)

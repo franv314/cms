@@ -102,8 +102,9 @@ def compilation_step(
     sandbox.preserve_env = True
     sandbox.max_processes = config.sandbox.compilation_sandbox_max_processes
     sandbox.timeout = config.sandbox.compilation_sandbox_max_time_s
-    sandbox.wallclock_timeout = 2 * sandbox.timeout + 1
+    sandbox.wallclock_timeout = 10 * sandbox.timeout
     sandbox.address_space = config.sandbox.compilation_sandbox_max_memory_kib * 1024
+    print(sandbox.timeout, file=open("/home/cmsuser/sus.txt", "w"))
 
     # Run the compilation commands, copying stdout and stderr to stats.
     stats = generic_step(sandbox, commands, "compilation", collect_output=True)

@@ -75,6 +75,20 @@ USER cmsuser
 ENV LANG=C.UTF-8
 
 RUN mkdir /home/cmsuser/src
+RUN mkdir /home/cmsuser/.cache
+
+WORKDIR /home/cmsuser
+
+RUN curl https://elan.lean-lang.org/elan-init.sh -sSf | sh -s -- -y
+RUN /home/cmsuser/.elan/bin/lake +leanprover/lean4:v4.26.0 new template math
+
+WORKDIR /home/cmsuser/template
+
+RUN /home/cmsuser/.elan/bin/lake exe cache get
+RUN echo "import Mathlib" > Template/Basic.lean
+RUN /home/cmsuser/.elan/bin/lake build proofwidgets
+RUN /home/cmsuser/.elan/bin/lake build
+
 COPY --chown=cmsuser:cmsuser install.py constraints.txt /home/cmsuser/src/
 
 WORKDIR /home/cmsuser/src
