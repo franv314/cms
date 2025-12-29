@@ -47,7 +47,7 @@ class Lean(Language):
     @property
     def executable_extension(self):
         """See Language.executable.extension."""
-        return ".lean"
+        return ".lean.exe"
     
     @property
     def requires_multithreading(self):
@@ -58,6 +58,12 @@ class Lean(Language):
                                  source_filenames, executable_filename,
                                  for_evaluation=True):
         """See Language.get_compilation_commands."""
+        assert len(source_filenames) == 1
+        return [["/bin/mv", source_filenames[0], executable_filename]]
+
+    def get_evaluation_commands(
+            self, executable_filename, main=None, args=None):
+        """See Language.get_evaluation_commands."""
         commands = [
             ["/bin/mkdir", ".lake"],
             ["/bin/mkdir", "Template"],
@@ -75,19 +81,10 @@ class Lean(Language):
             ["/bin/ln", "-s", "/home/cmsuser/template/lake-manifest.json", "./"], # Symlink lake-manifest.json
             ["/bin/ln", "-s", "/home/cmsuser/template/lean-toolchain", "./"],     # Symlink lean-toolchain
             ["/bin/ln", "-s", "/home/cmsuser/template/Template.lean", "./"],      # Symlink entrypoint
+            ["/bin/ln", "-s", f"../{executable_filename}", "Template/Solution.lean"],
+            ["/bin/ln", "-s", "../input.txt", "Template/Basic.lean"],
         ]
-        # Add actual files
-        for source_filename in source_filenames:
-            basename = os.path.splitext(os.path.basename(source_filename))[0]
-            lean_filename = "%s.lean" % basename
-            print(source_filename, basename, lean_filename, file=open("/home/cmsuser/sus.txt", "a"))
-            commands.append(["/bin/ln", "-s", f"/tmp/{lean_filename}", f"/tmp/Template/"])
 
         # Compile
         commands.append(["/home/cmsuser/.elan/bin/lake", "build"])
         return commands
-
-    def get_evaluation_commands(
-            self, executable_filename, main=None, args=None):
-        """See Language.get_evaluation_commands."""
-        return []

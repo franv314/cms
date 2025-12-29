@@ -66,7 +66,10 @@ COMPILATION_MESSAGES = MessageCollection([
 
 
 def compilation_step(
-    sandbox: Sandbox, commands: list[list[str]]
+    sandbox: Sandbox,
+    commands: list[list[str]],
+    time_limit: float | None = None,
+    memory_limit: int | None = None,
 ) -> tuple[bool, bool | None, list[str] | None, StatsDict | None]:
     """Execute some compilation commands in the sandbox.
 
@@ -101,10 +104,20 @@ def compilation_step(
     sandbox.maybe_add_mapped_directory("/var/lib/ghc")
     sandbox.preserve_env = True
     sandbox.max_processes = config.sandbox.compilation_sandbox_max_processes
-    sandbox.timeout = config.sandbox.compilation_sandbox_max_time_s
+
+    if time_limit is None:
+        time_limit = config.sandbox.compilation_sandbox_max_time_s
+    if time_limit <= 0:
+        raise ValueError("Time limit must be positive, is %s" % time_limit)
+    
+    if memory_limit is None:
+        memory_limit = config.sandbox.compilation_sandbox_max_memory_kib * 1024
+    if memory_limit <= 0:
+        raise ValueError("Memory limit must be positive, is %s" % memory_limit)
+
+    sandbox.timeout = time_limit
+    sandbox.address_space = memory_limit
     sandbox.wallclock_timeout = 10 * sandbox.timeout
-    sandbox.address_space = config.sandbox.compilation_sandbox_max_memory_kib * 1024
-    print(sandbox.timeout, file=open("/home/cmsuser/sus.txt", "w"))
 
     # Run the compilation commands, copying stdout and stderr to stats.
     stats = generic_step(sandbox, commands, "compilation", collect_output=True)

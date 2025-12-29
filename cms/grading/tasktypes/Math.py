@@ -48,7 +48,6 @@ class Math(TaskType):
     No parameters are needed.
     """
     # Codename of the template.
-    GRADER_BASENAME = "Basic"
     DEFAULT_INPUT_FILENAME = "input.txt"
 
     # Other constants to specify the task type behaviour and parameters.
@@ -73,7 +72,7 @@ class Math(TaskType):
 
     def get_compilation_commands(self, submission_format):
         """See TaskType.get_compilation_commands."""
-        codenames_to_compile = [self.GRADER_BASENAME + ".%l"]
+        codenames_to_compile = []
         codenames_to_compile.extend(
             [x for x in submission_format if x.endswith('.%l')])
         res = dict()
@@ -89,7 +88,7 @@ class Math(TaskType):
 
     def get_user_managers(self):
         """See TaskType.get_user_managers."""
-        return [self.GRADER_BASENAME + ".%l"]
+        return []
 
     def get_auto_managers(self):
         """See TaskType.get_auto_managers."""
@@ -121,12 +120,6 @@ class Math(TaskType):
         filenames_and_digests_to_get = {}
         # The grader, that must have been provided (copy and add to
         # compilation).
-        grader_filename = self.GRADER_BASENAME + source_ext
-        if not check_manager_present(job, grader_filename):
-            return
-        filenames_to_compile.append(grader_filename)
-        filenames_and_digests_to_get[grader_filename] = \
-            job.managers[grader_filename].digest
         # User's submitted file(s) (copy and add to compilation).
         for codename, file_ in job.files.items():
             if not codename.endswith(".%l"):
@@ -147,9 +140,6 @@ class Math(TaskType):
 
         # Create the sandbox.
         sandbox = create_sandbox(file_cacher, name="compile")
-        sandbox.add_mapped_directory("/home/cmsuser/.elan")
-        sandbox.add_mapped_directory("/home/cmsuser/template")
-        sandbox.set_env["ELAN_HOME"] = "/home/cmsuser/.elan"
         job.sandboxes.append(sandbox.get_root_path())
 
         # Copy required files in the sandbox (includes the grader if present).
@@ -165,6 +155,12 @@ class Math(TaskType):
         job.compilation_success = compilation_success
         job.text = text
         job.plus = stats
+        if box_success and compilation_success:
+            digest = sandbox.get_file_to_storage(
+                executable_filename,
+                "Executable %s for %s" % (executable_filename, job.info))
+            job.executables[executable_filename] = \
+                Executable(executable_filename, digest)
 
         # Cleanup.
         delete_sandbox(sandbox, job)
@@ -180,9 +176,8 @@ class Math(TaskType):
         # Prepare the execution
         executable_filename = next(iter(job.executables.keys()))
         language = get_language(job.language)
-        main = self.GRADER_BASENAME
         commands = language.get_evaluation_commands(
-            executable_filename, main=main)
+            executable_filename,)# main=main)
         executables_to_get = {
             executable_filename: job.executables[executable_filename].digest
         }
@@ -192,6 +187,10 @@ class Math(TaskType):
 
         # Create the sandbox
         sandbox = create_sandbox(file_cacher, name="evaluate")
+        sandbox.add_mapped_directory("/home/cmsuser/.elan")
+        sandbox.add_mapped_directory("/home/cmsuser/template")
+        sandbox.set_multiprocess(True)
+        sandbox.set_env["ELAN_HOME"] = "/home/cmsuser/.elan"
         job.sandboxes.append(sandbox.get_root_path())
 
         # Put the required files into the sandbox
@@ -201,15 +200,8 @@ class Math(TaskType):
             sandbox.create_file_from_storage(filename, digest)
 
         # Actually performs the execution
-        box_success, evaluation_success, stats = evaluation_step(
-            sandbox,
-            commands,
-            job.time_limit,
-            job.memory_limit,
-            writable_files=[],
-            stdin_redirect=None,
-            stdout_redirect=None,
-            multiprocess=job.multithreaded_sandbox)
+        box_success, evaluation_success, _, stats = \
+            compilation_step(sandbox, commands, time_limit=job.time_limit, memory_limit=job.memory_limit)
 
         outcome = None
         text = None
@@ -233,19 +225,12 @@ class Math(TaskType):
             job.text = ["Ok."]
             job.plus = stats
 
-        if sandbox is not None:
-            delete_sandbox(sandbox, job)
+        # if sandbox is not None:
+        #     delete_sandbox(sandbox, job)
 
     def evaluate(self, job, file_cacher):
         """See TaskType.evaluate."""
-        if not check_executables_number(job, 0):
+        if not check_executables_number(job, 1):
             return
 
-        job.success = True
-        job.outcome = "1.0"
-        job.text = ["translate:success"]
-        job.plus = {
-            "execution_time": None,
-            "execution_wall_clock_time": None,
-            "execution_memory": None,
-        }
+        self._execution_step(job, file_cacher)
