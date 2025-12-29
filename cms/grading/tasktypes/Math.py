@@ -225,8 +225,8 @@ class Math(TaskType):
             job.text = ["Ok."]
             job.plus = stats
 
-        # if sandbox is not None:
-        #     delete_sandbox(sandbox, job)
+        if sandbox is not None:
+            delete_sandbox(sandbox, job)
 
     def evaluate(self, job, file_cacher):
         """See TaskType.evaluate."""
