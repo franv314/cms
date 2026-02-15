@@ -47,7 +47,7 @@ class Lean(Language):
     @property
     def executable_extension(self):
         """See Language.executable.extension."""
-        return ".lean.exe"
+        return ".zip"
     
     @property
     def requires_multithreading(self):
@@ -58,8 +58,10 @@ class Lean(Language):
                                  source_filenames, executable_filename,
                                  for_evaluation=True):
         """See Language.get_compilation_commands."""
-        assert len(source_filenames) == 1
-        return [["/bin/mv", source_filenames[0], executable_filename]]
+        return [
+            ["/bin/mv", source_filenames[0], "solution.lean"],
+            ["/bin/zip", executable_filename, "solution.lean", *source_filenames[1:]]
+        ]
 
     def get_evaluation_commands(
             self, executable_filename, main=None, args=None):
@@ -81,7 +83,8 @@ class Lean(Language):
             ["/bin/ln", "-s", "/home/cmsuser/template/lake-manifest.json", "./"], # Symlink lake-manifest.json
             ["/bin/ln", "-s", "/home/cmsuser/template/lean-toolchain", "./"],     # Symlink lean-toolchain
             ["/bin/ln", "-s", "/home/cmsuser/template/Template.lean", "./"],      # Symlink entrypoint
-            ["/bin/ln", "-s", f"../{executable_filename}", "Template/Solution.lean"],
+            ["/bin/unzip", executable_filename],
+            ["/bin/ln", "-s", "../solution.lean", "Template/Solution.lean"],
             ["/bin/ln", "-s", "../input.txt", "Template/Basic.lean"],
         ]
 

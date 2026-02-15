@@ -80,7 +80,7 @@ RUN mkdir /home/cmsuser/.cache
 WORKDIR /home/cmsuser
 
 RUN curl https://elan.lean-lang.org/elan-init.sh -sSf | sh -s -- -y
-RUN /home/cmsuser/.elan/bin/lake +leanprover/lean4:v4.26.0 new template math
+RUN /home/cmsuser/.elan/bin/lake +leanprover/lean4:v4.27.0 new template math
 
 WORKDIR /home/cmsuser/template
 
