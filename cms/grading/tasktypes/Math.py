@@ -55,6 +55,19 @@ class Math(TaskType):
 
     ACCEPTED_PARAMETERS = []
 
+    COMPILATION_ALONE = "alone"
+    COMPILATION_GRADER = "grader"
+    GRADER_BASENAME = "Grader"
+
+    _COMPILATION = ParameterTypeChoice(
+        "Compilation",
+        "compilation",
+        "",
+        {COMPILATION_ALONE: "Submissions are self-sufficient",
+         COMPILATION_GRADER: "Submissions are compiled with a grader"})
+    
+    ACCEPTED_PARAMETERS = [_COMPILATION]
+
     @property
     def name(self) -> str:
         """See TaskType.name."""
@@ -68,11 +81,15 @@ class Math(TaskType):
         self.input_filename: str
         self.output_filename: str
         self.output_eval: str
+
         self._actual_input = self.DEFAULT_INPUT_FILENAME
+        self.compilation = self.parameters[0]
 
     def get_compilation_commands(self, submission_format):
         """See TaskType.get_compilation_commands."""
         codenames_to_compile = []
+        if self._uses_grader():
+            codenames_to_compile.append(self.GRADER_BASENAME + ".%l")
         codenames_to_compile.extend(
             [x for x in submission_format if x.endswith('.%l')])
         res = dict()
@@ -93,6 +110,9 @@ class Math(TaskType):
     def get_auto_managers(self):
         """See TaskType.get_auto_managers."""
         return []
+
+    def _uses_grader(self) -> bool:
+        return self.compilation == self.COMPILATION_GRADER
 
     @staticmethod
     def _executable_filename(codenames: Iterable[str], language: Language) -> str:
@@ -121,6 +141,13 @@ class Math(TaskType):
         # The grader, that must have been provided (copy and add to
         # compilation).
         # User's submitted file(s) (copy and add to compilation).
+        if self._uses_grader():
+            grader_filename = self.GRADER_BASENAME + source_ext
+            if not check_manager_present(job, grader_filename):
+                return
+            filenames_to_compile.append(grader_filename)
+            filenames_and_digests_to_get[grader_filename] = \
+                job.managers[grader_filename].digest
         for codename, file_ in job.files.items():
             if not codename.endswith(".%l"):
                 continue

@@ -58,10 +58,20 @@ class Lean(Language):
                                  source_filenames, executable_filename,
                                  for_evaluation=True):
         """See Language.get_compilation_commands."""
-        return [
-            ["/bin/mv", source_filenames[0], "solution.lean"],
-            ["/bin/zip", executable_filename, "solution.lean", *source_filenames[1:]]
-        ]
+        if len(source_filenames) == 1:
+            return [
+                ["/bin/mv", source_filenames[0], "solution.lean"],
+                ["/bin/zip", executable_filename, "solution.lean", *source_filenames[1:]]
+            ]
+        elif len(source_filenames) == 2:
+            return [
+                ["/bin/mv", source_filenames[0], "grader.lean"],
+                ["/bin/mv", source_filenames[1], "solution.lean"],
+                ["/bin/zip", executable_filename, "grader.lean", "solution.lean"]
+            ]
+        else:
+            raise ValueError("Compilation is only supported for one or two files")
+
 
     def get_evaluation_commands(
             self, executable_filename, main=None, args=None):
@@ -85,6 +95,7 @@ class Lean(Language):
             ["/bin/ln", "-s", "/home/cmsuser/template/Template.lean", "./"],      # Symlink entrypoint
             ["/bin/unzip", executable_filename],
             ["/bin/ln", "-s", "../solution.lean", "Template/Solution.lean"],
+            ["/bin/ln", "-s", "../grader.lean", "Template/Grader.lean"],
             ["/bin/ln", "-s", "../input.txt", "Template/Basic.lean"],
         ]
 
